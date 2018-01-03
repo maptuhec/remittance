@@ -29,6 +29,10 @@ contract Remittance {
 		LogEtherForTransferAdded(owner,msg.value);
 	}
 
+	function transferEther() {
+
+	};
+
 	function killSwitch() public onlyOwner {
         LogKillContract(owner);
         selfdestruct(owner);
