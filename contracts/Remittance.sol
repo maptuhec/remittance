@@ -3,11 +3,14 @@ pragma solidity ^0.4.18;
 contract Remittance {
 
 	address public owner;
-	address public bob;
-	bytes32 private passHash;
-	uint public etherForTransfer;
 
-	mapping (address => uint ) public balances;
+	mapping (bytes32 => Account ) public accounts;
+
+	struct Account {
+		bytes32 passHash;
+		uint etherForTransfer;
+		uint balance;
+	}
 	
 	event LogKillContract(address sender);
 	event LogEtherForTransferAdded(address sender, uint amount);
@@ -31,18 +34,20 @@ contract Remittance {
 	onlyOwner
 	passwordsAvailable(pass1,pass2)
 	{
-		passHash = keccak256(pass1,pass2);
+	return keccak256(pass1,pass2);
 	}
 
 	function challenge(bytes32 password) public payable onlyOwner {
 		require(password != 0);
-		etherForTransfer = msg.value;
+		require(msg.value > 0);
+		accounts[password].passHash = password;
+		accounts[etherForTransfer] = msg.value;
 		LogEtherForTransferAdded(owner,msg.value);
 	}
 
 	function transferEther(bytes32 pass1, bytes32 pass2) public passwordsAvailable(pass1,pass2) {
-		require(passHash == keccak256(pass1,pass2));
-		balances[bob] += etherForTransfer;
+		require(accounts[keccak256(pass1,pass2)].passHash == keccak256(pass1,pass2));
+		accounts[keccak256(pass1,pass2)].balance == accounts[keccak256(pass1,pass2)].etherForTransfer;
 	}
 
 	function withdraw() public {
