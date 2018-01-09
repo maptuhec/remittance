@@ -47,6 +47,7 @@ contract Remittance {
 
 	function transferEther(bytes32 pass1, bytes32 pass2) public onlyValidPasswords(pass1,pass2) {
 		require(accounts[keccak256(pass1,pass2)].passHash == keccak256(pass1,pass2));
+		require(accoints[keccak256(pass1,pass2)].etherForTransfer > 0);
 		msg.sender.transfer(accounts[keccak256(pass1,pass2)].etherForTransfer);
 		accounts[keccak256(pass1,pass2)].etherForTransfer = 0;
 		LogTransferEther(msg.sender);
