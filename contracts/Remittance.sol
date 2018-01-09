@@ -7,8 +7,8 @@ contract Remittance {
 	mapping (bytes32 => Account ) public accounts;
 
 	struct Account {
-		bytes32 passHash;
 		uint etherForTransfer;
+		uint deadline;
 	}
 	
 	event LogKillContract(address sender);
@@ -37,24 +37,26 @@ contract Remittance {
 	return keccak256(pass1,pass2);
 	}
 
-	function challenge(bytes32 password) public payable onlyOwner {
+	function challenge(bytes32 password, uint deadline) public payable onlyOwner {
 		require(password != 0);
 		require(msg.value > 0);
-		accounts[password].passHash = password;
 		accounts[password].etherForTransfer = msg.value;
+		accounts[password].deadline = now + deadline;
 		LogEtherForTransferAdded(owner,msg.value);
 	}
 
 	function transferEther(bytes32 pass1, bytes32 pass2) public onlyValidPasswords(pass1,pass2) {
-		require(accounts[keccak256(pass1,pass2)].passHash == keccak256(pass1,pass2));
-		require(accoints[keccak256(pass1,pass2)].etherForTransfer > 0);
-		msg.sender.transfer(accounts[keccak256(pass1,pass2)].etherForTransfer);
-		accounts[keccak256(pass1,pass2)].etherForTransfer = 0;
+		require(accounts[keccak256(pass1,pass2)].etherForTransfer > 0);
+		require(accounts[keccak256(pass1,pass2)].deadline >= now);
+		var account = accounts[keccak256(pass1,pass2)];
+		msg.sender.transfer(account.etherForTransfer);
+		account.etherForTransfer = 0;
 		LogTransferEther(msg.sender);
 	}
 
 	function withdraw(bytes32 passHash) public onlyOwner {
 		require(accounts[passHash].etherForTransfer > 0);
+		require(accounts[passHash].deadline < now);
         owner.transfer(accounts[passHash].etherForTransfer);
         LogWithdraw(owner);
     }
