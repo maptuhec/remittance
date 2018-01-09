@@ -9,7 +9,6 @@ contract Remittance {
 	struct Account {
 		bytes32 passHash;
 		uint etherForTransfer;
-		uint balance;
 	}
 	
 	event LogKillContract(address sender);
@@ -22,7 +21,7 @@ contract Remittance {
 		_;
 	}
 
-	modifier passwordsAvailable(bytes32 pass1, bytes32 pass2) {
+	modifier onlyValidPasswords(bytes32 pass1, bytes32 pass2) {
 		require(pass1 != 0);
 		require(pass2 != 0);
 		_;
@@ -32,7 +31,8 @@ contract Remittance {
 	public
 	constant
 	onlyOwner
-	passwordsAvailable(pass1,pass2)
+	onlyValidPasswords(pass1,pass2)
+	returns(bytes32 passHash)
 	{
 	return keccak256(pass1,pass2);
 	}
@@ -41,22 +41,21 @@ contract Remittance {
 		require(password != 0);
 		require(msg.value > 0);
 		accounts[password].passHash = password;
-		accounts[etherForTransfer] = msg.value;
+		accounts[password].etherForTransfer = msg.value;
 		LogEtherForTransferAdded(owner,msg.value);
 	}
 
-	function transferEther(bytes32 pass1, bytes32 pass2) public passwordsAvailable(pass1,pass2) {
+	function transferEther(bytes32 pass1, bytes32 pass2) public onlyValidPasswords(pass1,pass2) {
 		require(accounts[keccak256(pass1,pass2)].passHash == keccak256(pass1,pass2));
-		accounts[keccak256(pass1,pass2)].balance == accounts[keccak256(pass1,pass2)].etherForTransfer;
+		msg.sender.transfer(accounts[keccak256(pass1,pass2)].etherForTransfer);
+		accounts[keccak256(pass1,pass2)].etherForTransfer = 0;
+		LogTransferEther(msg.sender);
 	}
 
-	function withdraw() public {
-        require(balances[msg.sender] > 0);
-        uint valueToWithdraw = balances[msg.sender];
-        balances[msg.sender] = 0;
-        msg.sender.transfer(valueToWithdraw);
-        
-        LogWithdraw(msg.sender);
+	function withdraw(bytes32 passHash) public onlyOwner {
+		require(accounts[passHash].etherForTransfer > 0);
+        owner.transfer(accounts[passHash].etherForTransfer);
+        LogWithdraw(owner);
     }
 
 	function killSwitch() public onlyOwner {
