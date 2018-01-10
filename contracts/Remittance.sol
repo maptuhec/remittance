@@ -9,6 +9,7 @@ contract Remittance {
 	struct Account {
 		uint etherForTransfer;
 		uint deadline;
+		uint ownerAddress;
 	}
 	
 	event LogKillContract(address sender);
@@ -27,6 +28,11 @@ contract Remittance {
 		_;
 	}
 
+	modifier onlyUnusedPass(bytes32 passHash) {
+		require (accounts[passHash].deadline == 0);
+		_;
+	}
+
 	function createPassHash(bytes32 pass1, bytes32 pass2) 
 	public
 	constant
@@ -37,11 +43,12 @@ contract Remittance {
 	return keccak256(pass1,pass2);
 	}
 
-	function challenge(bytes32 password, uint deadline) public payable onlyOwner {
+	function challenge(bytes32 password, uint deadline) public payable onlyUnusedPass {
 		require(password != 0);
 		require(msg.value > 0);
 		accounts[password].etherForTransfer = msg.value;
 		accounts[password].deadline = now + deadline;
+		accounts[password].ownerAddress = msg.sender;
 		LogEtherForTransferAdded(owner,msg.value);
 	}
 
@@ -54,10 +61,12 @@ contract Remittance {
 		LogTransferEther(msg.sender);
 	}
 
-	function withdraw(bytes32 passHash) public onlyOwner {
+	function withdraw(bytes32 passHash) public {
 		require(accounts[passHash].etherForTransfer > 0);
-		require(accounts[passHash].deadline < now);
-        owner.transfer(accounts[passHash].etherForTransfer);
+		require(now > accounts[passHash].deadline);
+		require(accounts[passHash].ownerAddress == msg.sender);
+        msg.sender.transfer(accounts[passHash].etherForTransfer);
+		accounts[passHash].etherForTransfer = 0;
         LogWithdraw(owner);
     }
 
