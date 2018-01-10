@@ -9,7 +9,7 @@ contract Remittance {
 	struct Account {
 		uint etherForTransfer;
 		uint deadline;
-		uint ownerAddress;
+		address ownerAddress;
 	}
 	
 	event LogKillContract(address sender);
@@ -43,7 +43,7 @@ contract Remittance {
 	return keccak256(pass1,pass2);
 	}
 
-	function challenge(bytes32 password, uint deadline) public payable onlyUnusedPass {
+	function challenge(bytes32 password, uint deadline) public payable onlyUnusedPass(password) {
 		require(password != 0);
 		require(msg.value > 0);
 		accounts[password].etherForTransfer = msg.value;
@@ -54,7 +54,7 @@ contract Remittance {
 
 	function transferEther(bytes32 pass1, bytes32 pass2) public onlyValidPasswords(pass1,pass2) {
 		require(accounts[keccak256(pass1,pass2)].etherForTransfer > 0);
-		require(accounts[keccak256(pass1,pass2)].deadline >= now);
+		require(now <= accounts[keccak256(pass1,pass2)].deadline);
 		var account = accounts[keccak256(pass1,pass2)];
 		msg.sender.transfer(account.etherForTransfer);
 		account.etherForTransfer = 0;
