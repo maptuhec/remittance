@@ -13,7 +13,7 @@ contract Remittance {
 	}
 	
 	event LogKillContract(address sender);
-	event LogEtherForTransferAdded(address sender, uint amount);
+	event LogChallangeCreated(address sender, uint amount);
 	event LogTransferEther(address sender);
 	event LogWithdraw(address sender);
 
@@ -33,6 +33,10 @@ contract Remittance {
 		_;
 	}
 
+	function Remittance() public {
+		owner = msg.sender;
+	}
+
 	function createPassHash(bytes32 pass1, bytes32 pass2) 
 	public
 	constant
@@ -46,10 +50,11 @@ contract Remittance {
 	function challenge(bytes32 password, uint deadline) public payable onlyUnusedPass(password) {
 		require(password != 0);
 		require(msg.value > 0);
+		require(deadline > 0);
 		accounts[password].etherForTransfer = msg.value;
 		accounts[password].deadline = now + deadline;
 		accounts[password].ownerAddress = msg.sender;
-		LogEtherForTransferAdded(owner,msg.value);
+		LogChallangeCreated(msg.sender, msg.value);
 	}
 
 	function transferEther(bytes32 pass1, bytes32 pass2) public onlyValidPasswords(pass1,pass2) {
