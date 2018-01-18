@@ -1,6 +1,8 @@
 var Remittance = artifacts.require("./Remittance.sol")
 const util = require('./utils');
 const expectThrow = util.expectThrow;
+const currentTime = util.web3Now;
+const timeTravel = util.timeTravel
 
 contract('Remittance', function (accounts) {
 
@@ -14,6 +16,7 @@ contract('Remittance', function (accounts) {
 	var invalidDeadline = 0;
 	var pass1 = 'abcd';
 	var pass2 = '1234';
+	const day = 24 * 60 * 60;
 
 	beforeEach(function () {
 		return Remittance.new({
@@ -41,7 +44,7 @@ contract('Remittance', function (accounts) {
 		});
 		const account = await contract.accounts(passHash);
 		assert.equal(account[0].toString("10"), 10, "Challenge's value is not correct");
-		assert.equal(account[1].toString("10"), ((Date.now()) / 1000 | 0) + 1, "Challenge's deadline is not correct");
+		assert.equal(account[1].toString("10"), currentTime(web3) + 1, "Challenge's deadline is not correct");
 		assert.equal(account[2], alice, "Challenge's owner account is not correct");
 	})
 
@@ -89,7 +92,6 @@ contract('Remittance', function (accounts) {
 		const passHash = await contract.createPassHash(pass1, pass2, {
 			from: owner
 		})
-
 		await contract.challenge(passHash, deadline, {
 			from: alice,
 			value: etherValue
@@ -113,7 +115,7 @@ contract('Remittance', function (accounts) {
 			from: carol
 		});
 		const account = await contract.accounts(passHash);
-		assert.equal(account[0].toString("10"), 0, "Accounts's value is not correct");
+		assert.equal(account[0].toString("10"), 0, "Accounts's value is greater than zero");
 	})
 
 	it("should throw if first password is not correct", async function () {
@@ -150,11 +152,10 @@ contract('Remittance', function (accounts) {
 			from: alice,
 			value: etherValue
 		});
-		setTimeout(async function () {
-			await expectThrow(contract.transferEther('abcd', '1234', {
-				from: carol
-			}))
-		}, 180000);
+		await timeTravel(web3, day);
+		await expectThrow(contract.transferEther('abcd', '1234', {
+			from: carol
+		}))
 	});
 
 	it("should throw if accounts ether is less than zero", async function () {
@@ -203,13 +204,12 @@ contract('Remittance', function (accounts) {
 			from: alice,
 			value: etherValue
 		});
-		setTimeout(async function () {
-			await contract.withdraw(passHash, {
-				from: alice
-			});
-			const account = await contract.accounts(passHash);
-			assert.equal(account[0].toString("10"), 0, "Accounts's amount is not correct");
-		}, 180000);
+		await timeTravel(web3, day);
+		await contract.withdraw(passHash, {
+			from: alice
+		});
+		const account = await contract.accounts(passHash);
+		assert.equal(account[0].toString("10"), 0, "Accounts's amount is not greater than zero");
 	})
 
 	it("should emit event on withdrawal", async function () {
@@ -221,13 +221,12 @@ contract('Remittance', function (accounts) {
 			from: alice,
 			value: etherValue
 		});
-		setTimeout(async function () {
-			let result = await contract.withdraw(passHash, {
-				from: alice
-			});
-			assert.lengthOf(result.logs, 1, "There should be 1 event emitted from killing the contract!");
-			assert.strictEqual(result.logs[0].event, expectedEvent, `The event emitted was ${result.logs[0].event} instead of ${expectedEvent}`);
-		}, 180000);
+		await timeTravel(web3, day);
+		let result = await contract.withdraw(passHash, {
+			from: alice
+		});
+		assert.lengthOf(result.logs, 1, "There should be 1 event emitted from killing the contract!");
+		assert.strictEqual(result.logs[0].event, expectedEvent, `The event emitted was ${result.logs[0].event} instead of ${expectedEvent}`);
 	})
 
 	it("should throw if account's ether is not greater than zero", async function () {
